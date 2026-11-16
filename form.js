@@ -1,14 +1,4 @@
-/*
-Brian Maloney - CSE 134 Homework 4, Part 3
-Progressive enhancement for form-with-js.html.
-The form already validates and submits with plain HTML. This script adds:
-  1. Specific error messages using the Constraint Validation API
-  2. An on-page error area (a polite live region)
-  3. A remaining-character counter for the message field
-  4. An error history (form_errors) that is submitted as JSON
-*/
 
-// ---------- 1. Find the elements we need ----------
 const contactForm = document.querySelector("#contact-form");
 const nameInput = document.querySelector("#name");
 const emailInput = document.querySelector("#email");
@@ -24,52 +14,50 @@ const errorArea = document.querySelector("#error-area");
 const errorList = document.querySelector("#error-list");
 const errorEmpty = document.querySelector("#error-empty");
 
-// The fields we validate, in the order they appear on the page.
+
 const fields = [nameInput, emailInput, commentsInput];
 
-// Friendly names used in error messages.
+
 const fieldLabels = {
     name: "Name",
     email: "Email",
     comments: "Message"
 };
 
-// Messages for empty required fields.
+
 const requiredMessages = {
     name: "Name is required. Enter the name you would like me to use.",
     email: "Email is required. Enter an address I can reply to, like name@example.com.",
     comments: "Message is required. Write at least 10 characters."
 };
 
-// Remember each field's original aria-describedby (its hint) so we can
-// add and remove the error id without losing the hint.
+
 const baseDescribedBy = {};
 fields.forEach(function (field) {
     baseDescribedBy[field.id] = field.getAttribute("aria-describedby");
 });
 
-// Has the user typed in this field yet? Errors only appear on blur
-// for fields the user has actually edited.
+
 const editedFields = {
     name: false,
     email: false,
     comments: false
 };
 
-// Error history. Required name from the assignment.
+
 const form_errors = [];
 
-// Show remaining characters as a warning at this many or fewer.
+
 const WARNING_THRESHOLD = 100;
 
-// JavaScript is running, so the JS-only message areas can be shown.
+
 infoArea.hidden = false;
 errorArea.hidden = false;
 
 
-// ---------- 2. Validation with the Constraint Validation API ----------
+// 2
 
-// Returns a specific message for whatever is wrong, or "" if nothing is.
+
 function getErrorMessage(field) {
     const validity = field.validity;
     const label = fieldLabels[field.id];
@@ -89,7 +77,7 @@ function getErrorMessage(field) {
     return "";
 }
 
-// Names the kind of error for the history (no user data is stored).
+
 function getErrorType(validity) {
     if (validity.valueMissing) return "valueMissing";
     if (validity.typeMismatch) return "typeMismatch";
@@ -98,8 +86,8 @@ function getErrorType(validity) {
     return "other";
 }
 
-// Re-checks one field and sets (or clears) its custom message.
-// Uses .validity only, so it never fires "invalid" events.
+
+
 function checkField(field) {
     field.setCustomValidity("");          // clear any old message first
     const message = getErrorMessage(field);
@@ -108,8 +96,7 @@ function checkField(field) {
 }
 
 
-// ---------- 3. Showing and clearing errors on the page ----------
-
+// 3
 function errorIdFor(field) {
     return field.id + "-error";
 }
@@ -126,7 +113,7 @@ function showError(field, message) {
         item = document.createElement("li");
         item.id = errorId;
 
-        // Keep the list in the same order as the fields on the page.
+
         let nextItem = null;
         for (let i = fields.indexOf(field) + 1; i < fields.length; i++) {
             const candidate = document.getElementById(errorIdFor(fields[i]));
@@ -138,8 +125,7 @@ function showError(field, message) {
         errorList.insertBefore(item, nextItem);
     }
 
-    // Only touch the DOM when the text changes, so screen readers
-    // are not interrupted on every keystroke.
+
     if (item.dataset.message !== message) {
         item.dataset.message = message;
         item.textContent = "";
@@ -174,7 +160,7 @@ function updateEmptyMessage() {
     errorEmpty.hidden = errorList.children.length > 0;
 }
 
-// Check a field and update what is shown for it.
+
 function checkAndShow(field) {
     const message = checkField(field);
     if (message === "") {
@@ -185,11 +171,10 @@ function checkAndShow(field) {
 }
 
 
-// ---------- 4. Events while the user edits ----------
+//4
+
 
 fields.forEach(function (field) {
-    // While typing: keep the custom message current, and update or remove
-    // an error that is already showing. New errors are NOT added here.
     field.addEventListener("input", function () {
         editedFields[field.id] = true;
         const message = checkField(field);
@@ -202,7 +187,7 @@ fields.forEach(function (field) {
         }
     });
 
-    // Leaving a field the user edited: show any problem.
+
     field.addEventListener("blur", function () {
         if (editedFields[field.id]) {
             checkAndShow(field);
@@ -211,27 +196,21 @@ fields.forEach(function (field) {
 });
 
 
-// ---------- 5. Submission attempts and error history ----------
+// 5
 
-// A click on the submit button (including Enter in a text field, which the
-// browser turns into a click) happens BEFORE native validation. Refresh every
-// custom message so no stale message blocks a corrected form.
+
 submitButton.addEventListener("click", function () {
     fields.forEach(checkField);
 });
 
-// When a submission is blocked, the browser fires "invalid" on each invalid
-// field, all at once. "invalid" does not bubble, so we listen on the form
-// in the CAPTURE phase (the "true" argument). We never call checkValidity()
-// or reportValidity(), so every "invalid" event here is a submission attempt.
+
 let attemptNumber = 0;
 let attemptInProgress = false;
 
 contactForm.addEventListener("invalid", function (event) {
     const field = event.target;
 
-    // The first invalid event of a submission starts a new attempt.
-    // setTimeout(..., 0) runs after all of this attempt's events finish.
+  
     if (!attemptInProgress) {
         attemptInProgress = true;
         attemptNumber += 1;
@@ -246,7 +225,7 @@ contactForm.addEventListener("invalid", function (event) {
     }
     showError(field, message);
 
-    // One entry per invalid field per attempt. No names, emails, or message text.
+
     form_errors.push({
         attempt: attemptNumber,
         field: field.name,
@@ -256,14 +235,12 @@ contactForm.addEventListener("invalid", function (event) {
     });
 }, true);
 
-// "submit" only fires once the form is valid. Save the history right before
-// the normal POST to httpbin.
 contactForm.addEventListener("submit", function () {
     errorsInput.value = JSON.stringify(form_errors);
 });
 
 
-// ---------- 6. Character counter for the message ----------
+//6
 
 const maxCharacters = commentsInput.maxLength;   // read from the HTML maxlength
 let lastCountState = "normal";
@@ -292,13 +269,12 @@ function updateCharCount() {
     charCount.classList.toggle("is-warning", state === "warning");
     charCount.classList.toggle("is-limit", state === "limit");
 
-    // Announce only when the state changes (not on every keystroke).
+    // only when the state changes
     if (state !== lastCountState) {
         charStatus.textContent = state === "normal" ? "" : text;
         lastCountState = state;
     }
 }
 
-// "input" fires for typing, pasting, cutting, and deleting.
 commentsInput.addEventListener("input", updateCharCount);
 updateCharCount();
