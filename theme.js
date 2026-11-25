@@ -15,8 +15,6 @@ function readSavedTheme() {
 }
 
 
-
-
 function saveTheme(theme) {
     try {
         localStorage.setItem(THEME_KEY, theme);
@@ -29,14 +27,17 @@ function getCurrentTheme() {
     return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
 
+function getOtherTheme() {
+    return getCurrentTheme() === "dark" ? "light" : "dark";
+}
+
 
 function updateThemeButton() {
     const button = document.querySelector("#theme-toggle");
     if (button === null) {
         return;
     }
-    const otherTheme = getCurrentTheme() === "dark" ? "light" : "dark";
-    button.textContent = "Switch to " + otherTheme + " theme";
+    button.textContent = "Switch to " + getOtherTheme() + " theme";
 }
 
 function applyTheme(theme) {
@@ -44,33 +45,36 @@ function applyTheme(theme) {
     updateThemeButton();
 }
 
-const savedTheme = readSavedTheme();
-if (savedTheme !== null) {
-    document.documentElement.dataset.theme = savedTheme;
+function toggleTheme() {
+    const nextTheme = getOtherTheme();
+    applyTheme(nextTheme);
+    saveTheme(nextTheme);
 }
 
+function handleThemeClick() {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (document.startViewTransition && !reduceMotion) {
+        document.startViewTransition(toggleTheme);
+    } else {
+        toggleTheme();
+    }
+}
 
-
-document.addEventListener("DOMContentLoaded", function () {
+function setUpThemeToggle() {
     const button = document.querySelector("#theme-toggle");
     if (button === null) {
         return;
     }
 
     updateThemeButton();
-    button.hidden = false;   
-    
-    button.addEventListener("click", function () {
-        const nextTheme = getCurrentTheme() === "dark" ? "light" : "dark";
-        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        if (document.startViewTransition && !reduceMotion){
-            document.startViewTransition(function () {
-                applyTheme(nextTheme);
-            });
-        } else {
-            applyTheme(nextTheme);
-        }
+    button.hidden = false;
+    button.addEventListener("click", handleThemeClick);
+}
 
-        saveTheme(nextTheme); 
-    });
-});
+
+const savedTheme = readSavedTheme();
+if (savedTheme !== null) {
+    document.documentElement.dataset.theme = savedTheme;
+}
+
+document.addEventListener("DOMContentLoaded", setUpThemeToggle);

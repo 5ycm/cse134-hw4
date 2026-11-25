@@ -33,9 +33,12 @@ const requiredMessages = {
 
 
 const baseDescribedBy = {};
-fields.forEach(function (field) {
+
+function rememberDescribedBy(field) {
     baseDescribedBy[field.id] = field.getAttribute("aria-describedby");
-});
+}
+
+fields.forEach(rememberDescribedBy);
 
 
 const editedFields = {
@@ -105,6 +108,12 @@ function isErrorShown(field) {
     return document.getElementById(errorIdFor(field)) !== null;
 }
 
+function focusLinkedField(event) {
+    event.preventDefault();
+    const fieldId = event.currentTarget.getAttribute("href").slice(1);
+    document.getElementById(fieldId).focus();
+}
+
 function showError(field, message) {
     const errorId = errorIdFor(field);
     let item = document.getElementById(errorId);
@@ -133,10 +142,7 @@ function showError(field, message) {
         const link = document.createElement("a");
         link.href = "#" + field.id;
         link.textContent = fieldLabels[field.id] + ":";
-        link.addEventListener("click", function (event) {
-            event.preventDefault();
-            field.focus();
-        });
+        link.addEventListener("click", focusLinkedField);
 
         item.append(link, " " + message);
     }
@@ -174,49 +180,59 @@ function checkAndShow(field) {
 //4
 
 
-fields.forEach(function (field) {
-    field.addEventListener("input", function () {
-        editedFields[field.id] = true;
-        const message = checkField(field);
-        if (isErrorShown(field)) {
-            if (message === "") {
-                clearError(field);
-            } else {
-                showError(field, message);
-            }
+function handleFieldInput(event) {
+    const field = event.target;
+    editedFields[field.id] = true;
+    const message = checkField(field);
+    if (isErrorShown(field)) {
+        if (message === "") {
+            clearError(field);
+        } else {
+            showError(field, message);
         }
-    });
+    }
+}
 
+function handleFieldBlur(event) {
+    const field = event.target;
+    if (editedFields[field.id]) {
+        checkAndShow(field);
+    }
+}
 
-    field.addEventListener("blur", function () {
-        if (editedFields[field.id]) {
-            checkAndShow(field);
-        }
-    });
-});
+function addFieldListeners(field) {
+    field.addEventListener("input", handleFieldInput);
+    field.addEventListener("blur", handleFieldBlur);
+}
+
+fields.forEach(addFieldListeners);
 
 
 // 5
 
 
-submitButton.addEventListener("click", function () {
+function checkAllFields() {
     fields.forEach(checkField);
-});
+}
+
+submitButton.addEventListener("click", checkAllFields);
 
 
 let attemptNumber = 0;
 let attemptInProgress = false;
 
-contactForm.addEventListener("invalid", function (event) {
+function endAttempt() {
+    attemptInProgress = false;
+}
+
+function handleInvalid(event) {
     const field = event.target;
 
-  
+
     if (!attemptInProgress) {
         attemptInProgress = true;
         attemptNumber += 1;
-        setTimeout(function () {
-            attemptInProgress = false;
-        }, 0);
+        setTimeout(endAttempt, 0);
     }
 
     const message = checkField(field);
@@ -233,11 +249,15 @@ contactForm.addEventListener("invalid", function (event) {
         message: message,
         time: new Date().toISOString()
     });
-}, true);
+}
 
-contactForm.addEventListener("submit", function () {
+contactForm.addEventListener("invalid", handleInvalid, true);
+
+function saveErrorLog() {
     errorsInput.value = JSON.stringify(form_errors);
-});
+}
+
+contactForm.addEventListener("submit", saveErrorLog);
 
 
 //6
